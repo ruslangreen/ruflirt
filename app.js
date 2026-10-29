@@ -37,10 +37,10 @@ function beginListening(){
   $('heard').textContent=full;
   clearTimeout(partialTimer);
   // Short silence ends a thought; don't send every interim fragment.
-  partialTimer=setTimeout(()=>{if(current!==session||!active)return;flushSegment();endingForRestart=true;try{r.stop()}catch{beginListening()}},1200);
+  partialTimer=setTimeout(()=>{if(current!==session||!active)return;flushSegment();status('Слушаю следующую фразу')},1200);
  };
 
- r.onerror=e=>{if(current!==session)return;if(e.error==='no-speech'||(e.error==='aborted'&&endingForRestart)){status('Переподключаю микрофон');return}const names={ 'not-allowed':'Нет доступа к микрофону','audio-capture':'Микрофон недоступен','network':'Ошибка сервиса распознавания','language-not-supported':'Русский язык не поддерживается','no-speech':'Речь не обнаружена','aborted':'Остановлено'};stop(names[e.error]||('Ошибка: '+e.error))};
+ r.onerror=e=>{if(current!==session)return;if(e.error==='no-speech'||e.error==='aborted'){status('Переподключаю микрофон');return}const names={ 'not-allowed':'Нет доступа к микрофону','audio-capture':'Микрофон недоступен','network':'Ошибка сервиса распознавания','language-not-supported':'Русский язык не поддерживается','no-speech':'Речь не обнаружена','aborted':'Остановлено'};stop(names[e.error]||('Ошибка: '+e.error))};
  r.onend=()=>{if(current!==session||!active)return;flushSegment();clearTimeout(startTimer);if(document.hidden){stop('Открой RuFlirt на экране для прослушивания');return}restartCount++;if(restartCount>8&&!hadSpeech){restartCount=0;status('Ожидаю следующую фразу')}status('Переподключаю микрофон');restartTimer=setTimeout(()=>{if(active&&current===session)beginListening()},Math.min(450+restartCount*100,1200))};
  startTimer=setTimeout(()=>{if(current===session&&active)stop('Микрофон не запустился за 8 секунд. Попробуй Safari или перезагрузку страницы')},8000);
  try{r.start()}catch(e){stop('Не удалось запустить распознавание: '+e.message)}
