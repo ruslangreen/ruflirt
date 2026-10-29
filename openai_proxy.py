@@ -78,7 +78,7 @@ class Handler(BaseHTTPRequestHandler):
                 return self.reply(400, {"error": "invalid_text"})
             if not isinstance(history, list):
                 history = []
-            history = [str(item)[:300] for item in history[-8:]]
+            history = [(str(item.get("speaker", "other")) + ": " + str(item.get("text", "")))[:300] if isinstance(item, dict) else str(item)[:300] for item in history[-8:]]
         except (ValueError, UnicodeError, TypeError, json.JSONDecodeError):
             return self.reply(400, {"error": "invalid_json"})
         now = time.monotonic()
