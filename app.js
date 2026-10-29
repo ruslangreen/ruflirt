@@ -49,3 +49,13 @@ $('start').onclick=start;$('stop').onclick=()=>stop();$('test').onclick=()=>sugg
 if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js').catch(()=>{});
 
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&active)stop('В фоне микрофон недоступен — вернись в RuFlirt')});
+
+/* Remember the private proxy settings on this device only. */
+try {
+ const savedEndpoint=localStorage.getItem('ruflirt_endpoint');
+ const savedToken=localStorage.getItem('ruflirt_token');
+ if(savedEndpoint)$('endpoint').value=savedEndpoint;
+ if(savedToken)$('accessToken').value=savedToken;
+ $('endpoint').addEventListener('input',()=>localStorage.setItem('ruflirt_endpoint',$('endpoint').value.trim()));
+ $('accessToken').addEventListener('input',()=>localStorage.setItem('ruflirt_token',$('accessToken').value));
+} catch(e) { /* Private browsing may block storage. */ }
