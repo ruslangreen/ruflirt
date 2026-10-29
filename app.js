@@ -1,5 +1,5 @@
 const $=id=>document.getElementById(id);
-let recognition=null,active=false,last='',busy=false,startTimer=null,partialTimer=null,session=0,restartTimer=null,restartCount=0,hadSpeech=false,segment='',segmentFinal='',segmentSent=false,requestSeq=0;
+let recognition=null,active=false,last='',busy=false,startTimer=null,partialTimer=null,session=0,restartTimer=null,restartCount=0,hadSpeech=false,segment='',segmentFinal='',segmentSent=false,requestSeq=0,endingForRestart=false;
 const history=[];
 const templates=[[/сколько тебе лет|возраст/i,'Мне 42. А ты всегда начинаешь знакомство с допроса? 😄'],[/зачем (ты )?(здесь|сюда)|что (ты )?тут делаешь/i,'Зашёл пообщаться. А ты уже успела найти здесь кого-то интересного?'],[/как дела|как ты/i,'Вполне хорошо. А у тебя сегодня что было самым приятным?'],[/чем занимаешься|кем работаешь/i,'Работаю с технологиями, чтобы они делали скучное за людей. А ты чем увлечена?'],[/откуда ты|где живешь/i,'Из Подмосковья. А ты из какого города?'],[/как тебя зовут|имя/i,'Руслан. А тебя как зовут?'],[/привет|здравствуй/i,'Привет! Как проходит твой вечер?']];
 function fallback(t){for(const [re,v] of templates)if(re.test(t))return v;return 'Интересно! А как ты к этому пришла?'}
@@ -16,7 +16,7 @@ function beginListening(){
  cleanup();
  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
  if(!SR){status('Распознавание недоступно');$('heard').textContent='Safari не предоставляет распознавание речи. Проверь тестовый ввод ниже.';return}
- const current=++session;hadSpeech=false;segment='';segmentFinal='';segmentSent=false;$('start').disabled=true;status('Подключаю микрофон');
+ const current=++session;hadSpeech=false;segment='';segmentFinal='';segmentSent=false;endingForRestart=false;$('start').disabled=true;status('Подключаю микрофон');
  const r=new SR();recognition=r;r.lang='ru-RU';r.continuous=true;r.interimResults=true;
  r.onstart=()=>{if(current!==session)return;clearTimeout(startTimer);status('Слушаю')};
  function flushSegment(){clearTimeout(partialTimer);if(!segmentSent&&segment.trim()){segmentSent=true;suggest(segment.trim())}}
@@ -37,11 +37,11 @@ function beginListening(){
   $('heard').textContent=full;
   clearTimeout(partialTimer);
   // Short silence ends a thought; don't send every interim fragment.
-  partialTimer=setTimeout(()=>{if(current!==session||!active)return;flushSegment();try{r.stop()}catch{}},1200);
+  partialTimer=setTimeout(()=>{if(current!==session||!active)return;flushSegment();endingForRestart=true;try{r.stop()}catch{beginListening()}},1200);
  };
 
- r.onerror=e=>{if(current!==session)return;if(e.error==='no-speech'){status('Жду речь');return}const names={ 'not-allowed':'Нет доступа к микрофону','audio-capture':'Микрофон недоступен','network':'Ошибка сервиса распознавания','language-not-supported':'Русский язык не поддерживается','no-speech':'Речь не обнаружена','aborted':'Остановлено'};stop(names[e.error]||('Ошибка: '+e.error))};
- r.onend=()=>{if(current!==session||!active)return;flushSegment();clearTimeout(startTimer);if(document.hidden){stop('Открой RuFlirt на экране для прослушивания');return}restartCount++;if(restartCount>8&&!hadSpeech){stop('Safari остановил распознавание. Нажми «Слушать» снова');return}status('Переподключаю микрофон');restartTimer=setTimeout(()=>{if(active&&current===session)beginListening()},Math.min(300+restartCount*150,1200))};
+ r.onerror=e=>{if(current!==session)return;if(e.error==='no-speech'||(e.error==='aborted'&&endingForRestart)){status('Переподключаю микрофон');return}const names={ 'not-allowed':'Нет доступа к микрофону','audio-capture':'Микрофон недоступен','network':'Ошибка сервиса распознавания','language-not-supported':'Русский язык не поддерживается','no-speech':'Речь не обнаружена','aborted':'Остановлено'};stop(names[e.error]||('Ошибка: '+e.error))};
+ r.onend=()=>{if(current!==session||!active)return;flushSegment();clearTimeout(startTimer);if(document.hidden){stop('Открой RuFlirt на экране для прослушивания');return}restartCount++;if(restartCount>8&&!hadSpeech){restartCount=0;status('Ожидаю следующую фразу')}status('Переподключаю микрофон');restartTimer=setTimeout(()=>{if(active&&current===session)beginListening()},Math.min(450+restartCount*100,1200))};
  startTimer=setTimeout(()=>{if(current===session&&active)stop('Микрофон не запустился за 8 секунд. Попробуй Safari или перезагрузку страницы')},8000);
  try{r.start()}catch(e){stop('Не удалось запустить распознавание: '+e.message)}
 }
