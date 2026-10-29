@@ -42,7 +42,7 @@ class Handler(BaseHTTPRequestHandler):
    history=body.get("history",[])
    if not isinstance(history,list):history=[]
    context="\n".join(str(x.get("speaker",""))+": "+str(x.get("text",""))[:250] for x in history[-8:] if isinstance(x,dict))
-   payload=json.dumps({"model":MODEL,"stream":False,"prompt":PROMPT+"\nКонтекст:\n"+context+"\nДевушка: "+message+"\nОтвет:","options":{"num_predict":65,"temperature":0.65}}).encode()
+   payload=json.dumps({"model":MODEL,"stream":False,"think":False,"keep_alive":"5m","prompt":PROMPT+"\nКонтекст:\n"+context+"\nДевушка: "+message+"\nОтвет:","options":{"num_predict":80,"temperature":0.65}}).encode()
    req=urllib.request.Request(OLLAMA+"/api/generate",payload,{"Content-Type":"application/json"})
    with urllib.request.urlopen(req,timeout=8) as r: data=json.load(r)
    reply=str(data.get("response","")).strip().strip('"')[:240]
